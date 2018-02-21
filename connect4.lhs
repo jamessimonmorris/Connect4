@@ -5,6 +5,10 @@ psyjsmor@nottingham.ac.uk | psywmh@nottingham.ac.uk
 
 ----------------------------------------------------------------------
 
+> import Data.Char
+> import Data.List
+> import System.IO
+
 For flexibility, we define constants for the row and column size of the
 board, length of a winning sequence, and search depth for the game tree:
 
@@ -49,16 +53,47 @@ The following code displays a board on the screen:
 
 ----------------------------------------------------------------------
 
+We must represent the grid in terms of Player's in order to determine
+other conditions such as win or turn:
+
 > type Grid = [[Player]]
->
+
+Next player to move is simply given by swapping between O and X:
+
 > next :: Player -> Player
 > next O = X
 > next B = B
 > next X = O
->
+
+Empty grid defined by replicating the Blank Player:
+
 > empty :: Grid
 > empty = replicate rows (replicate cols B)
->
+
+End of game can be determined if the grid is full/filled with all
+non-blank players:
+
 > full :: Grid -> Bool
 > full = all (/= B) . concat
+
+We must calculate whos turn it is by comparing the number of Xs and Os:
+
+> turn :: Grid -> Player
+> turn g = if os <= xs then O else X
+>          where
+>             os = length (filter (== O) ps)
+>             xs = length (filter (== X) ps)
+>             ps = concat g
+
+sadw
+
+> wins :: Player -> Grid -> Bool
+> wins p g = any line (rows ++ cols ++ dias)
+>            where
+>               line = all (== p)
+>               rows = g
+>               cols = transpose g
+>               dias = [diag g, diag (map reverse g)]
 > 
+> diag :: Grid -> [Player]
+> diag g = [g !! n !! n | n <- [0..rows-1]]
