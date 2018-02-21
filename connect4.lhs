@@ -124,7 +124,7 @@ player value of B
 > getNat :: String -> IO Int
 > getNat prompt = do putStr prompt
 >                    xs <- getLine
->                    if xs /= [] && all isDigit xs then
+>                    if xs /= [] && all isDigit xs then         -- (&& any (<cols) xs) to check if values input are less than column size
 >                        return (read xs)
 >                    else
 >                        do putStrLn "ERROR: Invalid number"
@@ -153,7 +153,7 @@ player value of B
 >          | full g     = putStrLn "It's a draw!\n"
 >          | otherwise =
 >               do i <- getNat (prompt p)
->                  case move g ((i-1)`mod`cols) p of
+>                  case move g ((i-1) + ((rows-1)*cols)) p of            -- need to manipulate i to put X/O in lowest possible row of selected 'i' column
 >                     [] -> do putStrLn "ERROR: Invalid move"
 >                              run' g p
 >                     [g'] -> run g' (next p)
