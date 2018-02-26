@@ -1,5 +1,5 @@
 G52AFP Coursework 1 - Connect 4
-   
+
 James Simon Morris        | William Michael Hickling
 psyjsmor@nottingham.ac.uk | psywmh@nottingham.ac.uk
 
@@ -53,10 +53,10 @@ The following code displays a board on the screen:
 
 ----------------------------------------------------------------------
 
-We must represent the grid in terms of Player's in order to determine
+We must represent the Board in terms of Player's in order to determine
 other conditions such as win or turn:
 
-> type Grid = [[Player]]
+> type Board = [[Player]]
 
 Next player to move is simply given by swapping between O and X:
 
@@ -65,20 +65,20 @@ Next player to move is simply given by swapping between O and X:
 > next B = B
 > next X = O
 
-Empty grid defined by replicating the Blank Player:
+Empty Board defined by replicating the Blank Player:
 
-> empty :: Grid
+> empty :: Board
 > empty = replicate rows (replicate cols B)
 
-End of game can be determined if the grid is full/filled with all
+End of game can be determined if the Board is full/filled with all
 non-blank players:
 
-> full :: Grid -> Bool
+> full :: Board -> Bool
 > full = all (/= B) . concat
 
 We must calculate whos turn it is by comparing the number of Xs and Os:
 
-> turn :: Grid -> Player
+> turn :: Board -> Player
 > turn g = if os <= xs then O else X
 >          where
 >             os = length (filter (== O) ps)
@@ -87,24 +87,24 @@ We must calculate whos turn it is by comparing the number of Xs and Os:
 
 We use a function to determine win state for players:
 
-> wins :: Player -> Grid -> Bool
+> wins :: Player -> Board -> Bool
 > wins p g = any line (rows ++ cols ++ dias)
 >            where
 >               line = all (== p)
 >               rows = g
 >               cols = transpose g
 >               dias = [diag g, diag (map reverse g)]
-> 
-> diag :: Grid -> [Player]
+>
+> diag :: Board -> [Player]
 > diag g = [g !! n !! n | n <- [0..rows-1]]
-> 
-> won :: Grid -> Bool
+>
+> won :: Board -> Bool
 > won g = wins O g || wins X g
 
 The user(s) or computer can only select a cell that is 'valid', i.e. has
 player value of B
 
-> valid :: Grid -> Int -> Bool
+> valid :: Board -> Int -> Bool
 > valid g i = 0 <= i && i < rows*cols && concat g !! i == B
 
 
@@ -112,7 +112,7 @@ player value of B
 
 
 
-> move :: Grid -> Int -> Player -> [Grid]
+> move :: Board -> Int -> Player -> [Board]
 > move g i p = if valid g i then [chop cols (xs ++ [p] ++ ys)] else []
 >              where
 >                 (xs,B:ys) = splitAt i (concat g)
@@ -133,21 +133,21 @@ player value of B
 > connect4 :: IO ()
 > connect4 = run empty O
 
-> run :: Grid -> Player -> IO ()
+> run :: Board -> Player -> IO ()
 > run g p = do cls
 >              goto (1,1)
 >              showBoard g
 >              run' g p
 
 > type Pos = (Int, Int)
-> 
+>
 > cls :: IO ()
 > cls = putStr "\ESC[2J"
-> 
+>
 > goto :: Pos -> IO ()
 > goto (x,y) = putStr ("\ESC[" ++ show y ++ ";" ++ show x ++ "H")
 
-> run' :: Grid -> Player -> IO ()
+> run' :: Board -> Player -> IO ()
 > run' g p | wins O g   = putStrLn "Player O wins!\n"
 >          | wins X g   = putStrLn "Player X wins!\n"
 >          | full g     = putStrLn "It's a draw!\n"
