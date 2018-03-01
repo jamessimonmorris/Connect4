@@ -56,8 +56,6 @@ The following code displays a board on the screen:
 We must represent the Board in terms of Player's in order to determine
 other conditions such as win or turn:
 
-> type Board = [[Player]]
-
 Next player to move is simply given by swapping between O and X:
 
 > next :: Player -> Player
