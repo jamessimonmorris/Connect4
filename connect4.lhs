@@ -13,10 +13,10 @@ For flexibility, we define constants for the row and column size of the
 board, length of a winning sequence, and search depth for the game tree:
 
 > rows :: Int
-> rows = 6
+> rows = 8
 >
 > cols :: Int
-> cols = 7
+> cols = 9
 >
 > win :: Int
 > win = 4
@@ -105,7 +105,9 @@ player value of B:
 Carry out move:
 
 > move :: Board -> Int -> Player -> [Board]
-> move g i p = if valid g i then [chop cols (xs ++ [p] ++ ys)] else []
+> move g i p = if valid g i then [chop cols (xs ++ [p] ++ ys)]
+>              else if i >= cols then move g (i-cols) p
+>              else []
 >              where
 >                 (xs,B:ys) = splitAt i (concat g)
 >
