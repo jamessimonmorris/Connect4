@@ -97,51 +97,47 @@ We use a function to determine win state for players:
 > won g = wins O g || wins X g
 
 The user(s) or computer can only select a cell that is 'valid', i.e. has
-player value of B
+player value of B:
 
 > valid :: Board -> Int -> Bool
 > valid g i = 0 <= i && i < rows*cols && concat g !! i == B
 
-
-
-
-
+Carry out move:
 
 > move :: Board -> Int -> Player -> [Board]
 > move g i p = if valid g i then [chop cols (xs ++ [p] ++ ys)] else []
 >              where
 >                 (xs,B:ys) = splitAt i (concat g)
-
+>
 > chop :: Int -> [a] -> [[a]]
 > chop n [] = []
 > chop n xs = take n xs : chop n (drop n xs)
 
+Get natural number from input and show prompt:
+
 > getNat :: String -> IO Int
 > getNat prompt = do putStr prompt
 >                    xs <- getLine
->                    if xs /= [] && all isDigit xs then         -- (&& any (<cols) xs) to check if values input are less than column size
+>                    if xs /= [] && all isDigit xs && read xs > 0 && read xs <= cols then         -- (&& any (<cols) xs) to check if values input are less than column size
 >                        return (read xs)
 >                    else
 >                        do putStrLn "ERROR: Invalid number"
 >                           getNat prompt
+>
+> prompt :: Player -> String
+> prompt p = "Player " ++ show p ++ ", enter your move: "
+
+Run game:
 
 > connect4 :: IO ()
 > connect4 = run empty O
-
+>
 > run :: Board -> Player -> IO ()
 > run g p = do cls
 >              goto (1,1)
 >              showBoard g
 >              run' g p
-
-> type Pos = (Int, Int)
 >
-> cls :: IO ()
-> cls = putStr "\ESC[2J"
->
-> goto :: Pos -> IO ()
-> goto (x,y) = putStr ("\ESC[" ++ show y ++ ";" ++ show x ++ "H")
-
 > run' :: Board -> Player -> IO ()
 > run' g p | wins O g   = putStrLn "Player O wins!\n"
 >          | wins X g   = putStrLn "Player X wins!\n"
@@ -153,5 +149,12 @@ player value of B
 >                              run' g p
 >                     [g'] -> run g' (next p)
 
-> prompt :: Player -> String
-> prompt p = "Player " ++ show p ++ ", enter your move: "
+Clear screen and move cursor position utilities:
+
+> type Pos = (Int, Int)
+>
+> cls :: IO ()
+> cls = putStr "\ESC[2J"
+>
+> goto :: Pos -> IO ()
+> goto (x,y) = putStr ("\ESC[" ++ show y ++ ";" ++ show x ++ "H")
