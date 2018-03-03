@@ -48,7 +48,7 @@ The following code displays a board on the screen:
 >
 > showPlayer :: Player -> Char
 > showPlayer O = 'O'
-> showPlayer B = '-'
+> showPlayer B = '.'
 > showPlayer X = 'X'
 
 ----------------------------------------------------------------------
@@ -85,7 +85,7 @@ We use a function to determine win state for players:
 > wins :: Player -> Board -> Bool
 > wins p g = any line (rows ++ cols ++ dias)
 >            where
->               line = any (== p)
+>               line = all (== p) -- alter using 'win' variable
 >               rows = g
 >               cols = transpose g
 >               dias = [diag g, diag (map reverse g)]
