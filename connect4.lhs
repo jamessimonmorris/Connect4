@@ -13,10 +13,10 @@ For flexibility, we define constants for the row and column size of the
 board, length of a winning sequence, and search depth for the game tree:
 
 > rows :: Int
-> rows = 8
+> rows = 6
 >
 > cols :: Int
-> cols = 9
+> cols = 7
 >
 > win :: Int
 > win = 4
@@ -48,7 +48,7 @@ The following code displays a board on the screen:
 >
 > showPlayer :: Player -> Char
 > showPlayer O = 'O'
-> showPlayer B = '.'
+> showPlayer B = '-'
 > showPlayer X = 'X'
 
 ----------------------------------------------------------------------
@@ -85,7 +85,7 @@ We use a function to determine win state for players:
 > wins :: Player -> Board -> Bool
 > wins p g = any line (rows ++ cols ++ dias)
 >            where
->               line = all (== p)
+>               line = any (== p)
 >               rows = g
 >               cols = transpose g
 >               dias = [diag g, diag (map reverse g)]
@@ -120,7 +120,7 @@ Get natural number from input and show prompt:
 > getNat :: String -> IO Int
 > getNat prompt = do putStr prompt
 >                    xs <- getLine
->                    if xs /= [] && all isDigit xs && read xs > 0 && read xs <= cols then         -- (&& any (<cols) xs) to check if values input are less than column size
+>                    if xs /= [] && all isDigit xs && read xs > 0 && read xs <= cols then
 >                        return (read xs)
 >                    else
 >                        do putStrLn "ERROR: Invalid number"
@@ -146,7 +146,7 @@ Run game:
 >          | full g     = putStrLn "It's a draw!\n"
 >          | otherwise =
 >               do i <- getNat (prompt p)
->                  case move g ((i-1) + ((rows-1)*cols)) p of            -- need to manipulate i to put X/O in lowest possible row of selected 'i' column
+>                  case move g ((i-1) + ((rows-1)*cols)) p of
 >                     [] -> do putStrLn "ERROR: Invalid move"
 >                              run' g p
 >                     [g'] -> run g' (next p)
