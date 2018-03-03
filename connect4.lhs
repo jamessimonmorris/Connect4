@@ -132,21 +132,21 @@ Get natural number from input and show prompt:
 Run game:
 
 > connect4 :: IO ()
-> connect4 = run empty O
+> connect4 =  run empty O
+
+> run      :: Board -> Player -> IO()
+> run g p  =  do cls
+>                goto (1,1)
+>                showBoard g
+>                run' g p
 >
-> run :: Board -> Player -> IO ()
-> run g p = do cls
->              goto (1,1)
->              showBoard g
->              run' g p
->
-> run' :: Board -> Player -> IO ()
-> run' g p | wins O g   = putStrLn "Player O wins!\n"
->          | wins X g   = putStrLn "Player X wins!\n"
->          | full g     = putStrLn "It's a draw!\n"
+> run'     :: Board -> Player -> IO()
+> run' g p | wins O g  = putStrLn "Player O wins!\n"
+>          | wins X g  = putStrLn "Player X wins!\n"
+>          | full g    = putStrLn "It's a draw!\n"
 >          | otherwise =
 >               do i <- getNat (prompt p)
->                  case move g ((i-1) + ((rows-1)*cols)) p of
+>                  case move g i p of
 >                     [] -> do putStrLn "ERROR: Invalid move"
 >                              run' g p
 >                     [g'] -> run g' (next p)
@@ -160,3 +160,70 @@ Clear screen and move cursor position utilities:
 >
 > goto :: Pos -> IO ()
 > goto (x,y) = putStr ("\ESC[" ++ show y ++ ";" ++ show x ++ "H")
+
+Type to represent the Game tree that shall be used:
+
+> data Tree a = Node a [Tree a]
+>               deriving Show
+
+Building the game tree using the player inputs
+
+> gameTree :: Board -> Player -> Tree Board
+> gameTree g p = Node g [gameTree g' (next p) | g' <- moves g p]
+>
+> moves :: Board -> Player -> [Board]
+> moves g p
+>    | won g       = []
+>    | full g      = []
+>    | otherwise   = concat [move g i p | i <- [0..((rows * cols)-1)]]
+
+Pruning the Game tree to a specific depth
+
+> prune :: Int -> Tree a -> Tree a
+> prune 0 (Node x _) = Node x []
+> prune n (Node x ts) = Node x [prune (n-1) t | t <- ts]
+
+The minimax algorithm
+
+> minimax :: Tree Board -> Tree (Board,Player)
+> minimax (Node g [])
+>    | wins O g  = Node (g,O) []
+>    | wins X g  = Node (g,X) []
+>    | otherwise = Node (g,B) []
+> minimax (Node g ts)
+>    | turn g == O = Node (g, minimum ps) ts'
+>    | turn g == X = Node (g, maximum ps) ts'
+>                    where
+>                      ts' = map minimax ts
+>                      ps  = [p | Node (_,p) _ <- ts']
+
+A function that returns the best next move for the computer
+
+> bestmove :: Board -> Player -> Board
+> bestmove g p = head [g' | Node( g', p') _ <- ts, p' == best]
+>                where
+>                   tree = prune depth (gameTree g p)
+>                   Node (_,best) ts = minimax tree
+
+Human vs Computer, main function to run H vs C version
+
+> main :: IO()
+> main =  do hSetBuffering stdout NoBuffering
+>            play empty O
+>
+> play     :: Board -> Player -> IO()
+> play g p = do cls
+>               goto (1,1)
+>               putGrid g
+>               play' g p
+> play'    :: Board -> Player -> IO()
+> play' g p
+>     | wins O g = putStrLn "Player O wins!\n"
+>     | wins X g = putStrln "Player X wins!\n"
+>     | full g   = putStrln "It's a draw!\n"
+>     | p == O   = do i <- getNat (prompt p)
+>                     case move g i p of [] -> do putStrLn "ERROR: Invalid Move"
+>                                                 play' g p
+>                                        [g'] -> play g' (next p)
+>     | p == X  = do putStr "Player X is thinking... "
+>                    (play $! (bestmove g p))(next p)
