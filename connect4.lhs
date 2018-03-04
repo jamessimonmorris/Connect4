@@ -140,7 +140,7 @@ Carry out move:
 
 > move :: Board -> Int -> Player -> [Board]
 > move g i p = if valid g i then [chop cols (xs ++ [p] ++ ys)]
->              else if i >= cols then move g (i-cols) p
+>              else if i >= 1 then move g (i - cols) p
 >              else []
 >              where
 >                 (xs,B:ys) = splitAt i (concat g)
@@ -155,7 +155,7 @@ Get natural number from input and show prompt:
 > getNat prompt = do putStr prompt
 >                    xs <- getLine
 >                    if xs /= [] && all isDigit xs && read xs > 0 && read xs <= cols then
->                        return (read xs)
+>                        return (read xs - 1 + ((rows-1)*cols))
 >                    else
 >                        do putStrLn "ERROR: Invalid number"
 >                           getNat prompt
@@ -180,7 +180,7 @@ Run game:
 >          | full (shrink g (cols-win) (rows))     = putStrLn "It's a draw!\n"
 >          | otherwise =
 >               do i <- getNat (prompt p)
->                  case move g ((i-1) + ((rows-1)*cols)) p of
+>                  case move g i p of
 >                     [] -> do putStrLn "ERROR: Invalid move"
 >                              run' g p
 >                     [g'] -> run g' (next p)
@@ -209,7 +209,7 @@ Building the game tree using the player inputs:
 > moves g p
 >    | won g       = []
 >    | full g      = []
->    | otherwise   = concat [move g i p | i <- [0..((rows * cols)-1)]]
+>    | otherwise   = concat [move g i p | i <- [((rows-1)*cols)..((rows * cols)-1)]]
 
 Pruning the Game tree to a specific depth:
 
@@ -257,7 +257,7 @@ Human vs Computer, main function to run H vs C version:
 >    | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player X wins!\n"
 >    | full g                                = putStrLn "It's a draw!\n"
 >    | p == O                                = do i <- getNat (prompt p)
->                                                 case move g ((i-1) + ((rows-1)*cols)) p of 
+>                                                 case move g i p of 
 >                                                    [] -> do putStrLn "ERROR: Invalid Move"
 >                                                             play' g p
 >                                                    [g'] -> play g' (next p)
