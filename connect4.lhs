@@ -65,6 +65,9 @@ Empty Board defined by replicating the Blank Player:
 > empty :: Board
 > empty = replicate rows (replicate cols B)
 
+> testBoard :: Board
+> testBoard = [[B,X,X,O,X,B,B],[B,O,O,X,X,B,B],[B,O,X,O,O,B,X],[X,O,O,X,X,X,O],[B,B,B,B,B,B,B],[X,O,O,X,B,B,O]]
+
 End of game can be determined if the Board is full/filled with all
 non-blank players:
 
@@ -82,19 +85,50 @@ We must calculate whos turn it is by comparing the number of Xs and Os:
 
 We use a function to determine win state for players:
 
-> wins :: Player -> Board -> Bool
-> wins p g = any line (rows ++ cols ++ dias)
->            where
->               line = all (== p) -- alter using 'win' variable
->               rows = g
->               cols = transpose g
->               dias = [diag g, diag (map reverse g)]
+> wins :: Player -> Board -> Board -> Bool
+> wins p g h = any line (rows ++ cols)
+>              where
+>                 line = all (== p)
+>                 rows = g
+>                 cols = h
+
+Need to add diag - '++ dias' top line and 'dias = [diag g, diag (map reverse g)]' in where
+
 >
-> diag :: Board -> [Player]
-> diag g = [g !! n !! n | n <- [0..rows-1]]
+> diag :: Board -> Row
+> diag g = [g !! n !! n | n <- [0..win-1]]
 >
 > won :: Board -> Bool
-> won g = wins O g || wins X g
+> won g = wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) || wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols)
+
+Shrink array size to rows of 4 to test for win condition:
+
+i tracks subarray within row, j tracks number of rows
+
+> shrink :: Board -> Int -> Int -> Board
+> shrink (x:xs) i j = if i >= 0 && j > 1 then
+>                                   [(take win (drop i x))] ++ (shrink (x:xs) (i-1) j)
+>                     else if j == 1 then
+>                                   [(take win (drop i x))] ++ (shrink'' x (cols-win-1) j)
+>                     else if i < 0 then
+>                                   shrink xs (cols-win) (j-1)
+>                     else []
+>
+> shrink' :: Board -> Int -> Int -> Board
+> shrink' (x:xs) i j = if i >= 0 && j > 1 then
+>                                   [(take win (drop i x))] ++ (shrink' (x:xs) (i-1) j)
+>                     else if j == 1 then
+>                                   [(take win (drop i x))] ++ (shrink'' x (rows-win-1) j)
+>                     else if i < 0 then
+>                                   shrink' xs (rows-win) (j-1)
+>                     else []
+>
+> shrink'' :: Row -> Int -> Int -> Board
+> shrink'' x i j = if i >= 0 then [take win (drop i x)] ++ (shrink'' x (i-1) j)
+>                  else []
+
+> test1 :: Board -> Row
+> test1 (x:xs) = x
 
 The user(s) or computer can only select a cell that is 'valid', i.e. has
 player value of B:
@@ -141,12 +175,12 @@ Run game:
 >                run' g p
 >
 > run'     :: Board -> Player -> IO()
-> run' g p | wins O g  = putStrLn "Player O wins!\n"
->          | wins X g  = putStrLn "Player X wins!\n"
->          | full g    = putStrLn "It's a draw!\n"
+> run' g p | wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player O wins!\n"
+>          | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player X wins!\n"
+>          | full (shrink g (cols-win) (rows))     = putStrLn "It's a draw!\n"
 >          | otherwise =
 >               do i <- getNat (prompt p)
->                  case move g i p of
+>                  case move g ((i-1) + ((rows-1)*cols)) p of
 >                     [] -> do putStrLn "ERROR: Invalid move"
 >                              run' g p
 >                     [g'] -> run g' (next p)
@@ -166,7 +200,7 @@ Type to represent the Game tree that shall be used:
 > data Tree a = Node a [Tree a]
 >               deriving Show
 
-Building the game tree using the player inputs
+Building the game tree using the player inputs:
 
 > gameTree :: Board -> Player -> Tree Board
 > gameTree g p = Node g [gameTree g' (next p) | g' <- moves g p]
@@ -177,18 +211,18 @@ Building the game tree using the player inputs
 >    | full g      = []
 >    | otherwise   = concat [move g i p | i <- [0..((rows * cols)-1)]]
 
-Pruning the Game tree to a specific depth
+Pruning the Game tree to a specific depth:
 
 > prune :: Int -> Tree a -> Tree a
 > prune 0 (Node x _) = Node x []
 > prune n (Node x ts) = Node x [prune (n-1) t | t <- ts]
 
-The minimax algorithm
+The minimax algorithm:
 
 > minimax :: Tree Board -> Tree (Board,Player)
 > minimax (Node g [])
->    | wins O g  = Node (g,O) []
->    | wins X g  = Node (g,X) []
+>    | wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = Node (g,O) []
+>    | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = Node (g,X) []
 >    | otherwise = Node (g,B) []
 > minimax (Node g ts)
 >    | turn g == O = Node (g, minimum ps) ts'
@@ -197,33 +231,35 @@ The minimax algorithm
 >                      ts' = map minimax ts
 >                      ps  = [p | Node (_,p) _ <- ts']
 
-A function that returns the best next move for the computer
+A function that returns the best next move for the computer:
 
 > bestmove :: Board -> Player -> Board
-> bestmove g p = head [g' | Node( g', p') _ <- ts, p' == best]
+> bestmove g p = head [g' | Node (g',p') _ <- ts, p' == best]
 >                where
 >                   tree = prune depth (gameTree g p)
 >                   Node (_,best) ts = minimax tree
 
-Human vs Computer, main function to run H vs C version
+Human vs Computer, main function to run H vs C version:
 
-> main :: IO()
+> main :: IO ()
 > main =  do hSetBuffering stdout NoBuffering
 >            play empty O
 >
-> play     :: Board -> Player -> IO()
+> play     :: Board -> Player -> IO ()
 > play g p = do cls
 >               goto (1,1)
->               putGrid g
+>               showBoard g
 >               play' g p
-> play'    :: Board -> Player -> IO()
+>
+> play'    :: Board -> Player -> IO ()
 > play' g p
->     | wins O g = putStrLn "Player O wins!\n"
->     | wins X g = putStrln "Player X wins!\n"
->     | full g   = putStrln "It's a draw!\n"
->     | p == O   = do i <- getNat (prompt p)
->                     case move g i p of [] -> do putStrLn "ERROR: Invalid Move"
->                                                 play' g p
->                                        [g'] -> play g' (next p)
->     | p == X  = do putStr "Player X is thinking... "
->                    (play $! (bestmove g p))(next p)
+>    | wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player O wins!\n"
+>    | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player X wins!\n"
+>    | full g                                = putStrLn "It's a draw!\n"
+>    | p == O                                = do i <- getNat (prompt p)
+>                                                 case move g ((i-1) + ((rows-1)*cols)) p of 
+>                                                    [] -> do putStrLn "ERROR: Invalid Move"
+>                                                             play' g p
+>                                                    [g'] -> play g' (next p)
+>    | p == X  = do putStr "Player X is thinking... "
+>                   (play $! (bestmove g p)) (next p)
