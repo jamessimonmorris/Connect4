@@ -65,8 +65,8 @@ Empty Board defined by replicating the Blank Player:
 > empty :: Board
 > empty = replicate rows (replicate cols B)
 
-> testBoard :: Board
-> testBoard = [[B,X,X,O,X,B,B],[B,O,O,X,X,B,B],[B,O,X,O,O,B,X],[X,O,O,X,X,X,O],[B,B,B,B,B,B,B],[X,O,O,X,B,B,O]]
+> tsB :: Board
+> tsB = [[B,X,X,O,X,B,B],[B,O,O,X,X,B,B],[B,O,X,O,O,B,X],[X,O,O,X,X,X,O],[B,B,B,B,B,B,B],[X,O,O,X,B,B,O]]
 
 End of game can be determined if the Board is full/filled with all
 non-blank players:
@@ -85,21 +85,29 @@ We must calculate whos turn it is by comparing the number of Xs and Os:
 
 We use a function to determine win state for players:
 
-> wins :: Player -> Board -> Board -> Bool
-> wins p g h = any line (rows ++ cols)
+> wins :: Player -> Board -> Bool
+> wins p g = any line (rowsL ++ colsL ++ dias)
 >              where
 >                 line = all (== p)
->                 rows = g
->                 cols = h
+>                 rowsL = (shrink g (cols-win) rows)
+>                 colsL = (shrink' (transpose g) (rows-win) cols)
+>                 dias = diag' g 0 ++ diag' (map reverse g) 0
 
 Need to add diag - '++ dias' top line and 'dias = [diag g, diag (map reverse g)]' in where
 
 >
-> diag :: Board -> Row
-> diag g = [g !! n !! n | n <- [0..win-1]]
+> diag :: Board -> Board -> Int -> Int -> Int -> Row
+> diag (x:xs) g i j k = if i < 4 && j <= (cols-win) && k < (rows-win) then (take 1 (drop (i+j) x)) ++ diag xs g (i+1) j k
+>                       else if i >= 4 && j <= (cols-win) && k < (rows-win) then (take 1 (drop (i+j) x)) ++ diag g g 0 (j+1) k
+>                       else if j > (cols-win) && k < (rows-win) then diag (drop 1 g) (drop 1 g) 0 0 (k+1)
+>                       else []
+>
+> diag' :: Board -> Int -> Board
+> diag' g i = if i < (win*(cols-win+1)) then [take win (drop i (diag g g 0 0 0))] ++ diag' g (i+win)
+>             else []
 >
 > won :: Board -> Bool
-> won g = wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) || wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols)
+> won g = wins O g || wins X g
 
 Shrink array size to rows of 4 to test for win condition:
 
@@ -175,8 +183,8 @@ Run game:
 >                run' g p
 >
 > run'     :: Board -> Player -> IO()
-> run' g p | wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player O wins!\n"
->          | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player X wins!\n"
+> run' g p | wins O g = putStrLn "Player O wins!\n"
+>          | wins X g = putStrLn "Player X wins!\n"
 >          | full (shrink g (cols-win) (rows))     = putStrLn "It's a draw!\n"
 >          | otherwise =
 >               do i <- getNat (prompt p)
@@ -221,8 +229,8 @@ The minimax algorithm:
 
 > minimax :: Tree Board -> Tree (Board,Player)
 > minimax (Node g [])
->    | wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = Node (g,O) []
->    | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = Node (g,X) []
+>    | wins O g = Node (g,O) []
+>    | wins X g = Node (g,X) []
 >    | otherwise = Node (g,B) []
 > minimax (Node g ts)
 >    | turn g == O = Node (g, minimum ps) ts'
@@ -253,8 +261,8 @@ Human vs Computer, main function to run H vs C version:
 >
 > play'    :: Board -> Player -> IO ()
 > play' g p
->    | wins O (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player O wins!\n"
->    | wins X (shrink g (cols-win) (rows)) (shrink' (transpose g) (rows-win) cols) = putStrLn "Player X wins!\n"
+>    | wins O g = putStrLn "Player O wins!\n"
+>    | wins X g = putStrLn "Player X wins!\n"
 >    | full g                                = putStrLn "It's a draw!\n"
 >    | p == O                                = do i <- getNat (prompt p)
 >                                                 case move g i p of 
