@@ -24,7 +24,7 @@ board, length of a winning sequence, and search depth for the game tree:
 > win = 4
 >
 > depth :: Int
-> depth = 7
+> depth = 6
 
 The board itself is represented as a list of rows, where each row is
 a list of player values, subject to the above row and column sizes:
