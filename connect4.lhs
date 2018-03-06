@@ -8,6 +8,8 @@ psyjsmor@nottingham.ac.uk | psywmh@nottingham.ac.uk
 > import Data.Char
 > import Data.List
 > import System.IO
+> import System.IO.Unsafe
+> import System.Random hiding (next)
 
 For flexibility, we define constants for the row and column size of the
 board, length of a winning sequence, and search depth for the game tree:
@@ -64,9 +66,9 @@ Empty Board defined by replicating the Blank Player:
 
 > empty :: Board
 > empty = replicate rows (replicate cols B)
-
-> tsB :: Board
-> tsB = [[B,X,X,O,X,B,B],[B,O,O,X,X,B,B],[B,O,X,O,O,B,X],[X,O,O,X,X,X,O],[B,B,B,B,B,B,B],[X,O,O,X,B,B,O]]
+>
+> test :: Board
+> test = [[B,X,X,O,X,B,B],[B,O,O,X,X,B,B],[B,O,X,O,O,B,X],[X,O,O,X,X,X,O],[B,B,B,B,B,B,B],[X,O,O,X,B,B,O]]
 
 End of game can be determined if the Board is full/filled with all
 non-blank players:
@@ -86,28 +88,36 @@ We must calculate whos turn it is by comparing the number of Xs and Os:
 We use a function to determine win state for players:
 
 > wins :: Player -> Board -> Bool
-> wins p g = any line (rowsL ++ colsL ++ dias)
+> wins p g = any line (rowsL ++ colsL ++ diagL)
 >              where
 >                 line = all (== p)
 >                 rowsL = (shrink g (cols-win) rows)
 >                 colsL = (shrink' (transpose g) (rows-win) cols)
->                 dias = diag' g 0 ++ diag' (map reverse g) 0
+>                 diagL = diag'' g 0 ++ diag'' (map reverse g) 0
 
-Need to add diag - '++ dias' top line and 'dias = [diag g, diag (map reverse g)]' in where
-
->
-> diag :: Board -> Board -> Int -> Int -> Int -> Row
-> diag (x:xs) g i j k = if i < 4 && j <= (cols-win) && k < (rows-win) then (take 1 (drop (i+j) x)) ++ diag xs g (i+1) j k
->                       else if i >= 4 && j <= (cols-win) && k < (rows-win) then (take 1 (drop (i+j) x)) ++ diag g g 0 (j+1) k
->                       else if j > (cols-win) && k < (rows-win) then diag (drop 1 g) (drop 1 g) 0 0 (k+1)
->                       else []
+> diag :: Board -> Int -> Int -> Row
+> diag [] i j = []
+> diag g i j = if i < win && j <= (cols-win)
+>                  then take 1 (drop (i+j) (findRow g i)) ++ diag g (i+1) j
+>              else if i >= win && j <= (cols-win)
+>                  then diag g 0 (j+1)
+>              else []
 >
 > diag' :: Board -> Int -> Board
-> diag' g i = if i < (win*(cols-win+1)) then [take win (drop i (diag g g 0 0 0))] ++ diag' g (i+win)
->             else []
+> diag' g i = if i <= (win*(rows-win+1))
+>                    then [take win (drop i (diag g 0 0))] ++ diag' g (i+win)
+>                  else []
 >
+> diag'' :: Board -> Int -> Board
+> diag'' (x:xs) i = if i <= (rows-win) then diag' (x:xs) 0 ++ diag'' xs (i+1)
+>              else []
+
 > won :: Board -> Bool
 > won g = wins O g || wins X g
+>
+> findRow :: Board -> Int -> Row
+> findRow (x:xs) 0 = x
+> findRow (x:xs) i = findRow xs (i-1)
 
 Shrink array size to rows of 4 to test for win condition:
 
@@ -134,9 +144,6 @@ i tracks subarray within row, j tracks number of rows
 > shrink'' :: Row -> Int -> Int -> Board
 > shrink'' x i j = if i >= 0 then [take win (drop i x)] ++ (shrink'' x (i-1) j)
 >                  else []
-
-> test1 :: Board -> Row
-> test1 (x:xs) = x
 
 The user(s) or computer can only select a cell that is 'valid', i.e. has
 player value of B:
@@ -242,10 +249,14 @@ The minimax algorithm:
 A function that returns the best next move for the computer:
 
 > bestmove :: Board -> Player -> Board
-> bestmove g p = head [g' | Node (g',p') _ <- ts, p' == best]
+> bestmove g p = getRandomElement [g' | Node (g',p') _ <- ts, p' == best]
 >                where
 >                   tree = prune depth (gameTree g p)
 >                   Node (_,best) ts = minimax tree
+>
+> getRandomElement :: [a] -> a
+> getRandomElement xs = xs !! r
+>                       where r = unsafePerformIO (randomRIO (0, length xs - 1))
 
 Human vs Computer, main function to run H vs C version:
 
@@ -263,11 +274,11 @@ Human vs Computer, main function to run H vs C version:
 > play' g p
 >    | wins O g = putStrLn "Player O wins!\n"
 >    | wins X g = putStrLn "Player X wins!\n"
->    | full g                                = putStrLn "It's a draw!\n"
->    | p == O                                = do i <- getNat (prompt p)
->                                                 case move g i p of 
->                                                    [] -> do putStrLn "ERROR: Invalid Move"
->                                                             play' g p
->                                                    [g'] -> play g' (next p)
->    | p == X  = do putStr "Player X is thinking... "
->                   (play $! (bestmove g p)) (next p)
+>    | full g   = putStrLn "It's a draw!\n"
+>    | p == O   = do i <- getNat (prompt p)
+>                    case move g i p of 
+>                       [] -> do putStrLn "ERROR: Invalid Move"
+>                                play' g p
+>                       [g'] -> play g' (next p)
+>    | p == X   = do putStr "Player X is thinking... "
+>                    (play $! (bestmove g p)) (next p)
