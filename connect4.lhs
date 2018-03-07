@@ -24,7 +24,7 @@ board, length of a winning sequence, and search depth for the game tree:
 > win = 4
 >
 > depth :: Int
-> depth = 6
+> depth = 7
 
 The board itself is represented as a list of rows, where each row is
 a list of player values, subject to the above row and column sizes:
@@ -95,55 +95,54 @@ We use a function to determine win state for players:
 >                 colsL = (shrink' (transpose g) (rows-win) cols)
 >                 diagL = diag'' g 0 ++ diag'' (map reverse g) 0
 
+Concatenate all possible diagonals in order to determine win state:
+
 > diag :: Board -> Int -> Int -> Row
 > diag [] i j = []
-> diag g i j = if i < win && j <= (cols-win)
->                  then take 1 (drop (i+j) (findRow g i)) ++ diag g (i+1) j
->              else if i >= win && j <= (cols-win)
->                  then diag g 0 (j+1)
->              else []
+> diag g i j
+>   | i < win && j <= (cols-win)  = take 1 (drop (i+j) (findRow g i)) ++ diag g (i+1) j
+>   | i >= win && j <= (cols-win) = diag g 0 (j+1)
+>   | otherwise                   = []
 >
 > diag' :: Board -> Int -> Board
-> diag' g i = if i <= (win*(rows-win+1))
->                    then [take win (drop i (diag g 0 0))] ++ diag' g (i+win)
->                  else []
+> diag' g i
+>   | i <= (win*(rows-win+1)) = [take win (drop i (diag g 0 0))] ++ diag' g (i+win)
+>   | otherwise               = []
 >
 > diag'' :: Board -> Int -> Board
-> diag'' (x:xs) i = if i <= (rows-win) then diag' (x:xs) 0 ++ diag'' xs (i+1)
->              else []
-
-> won :: Board -> Bool
-> won g = wins O g || wins X g
+> diag'' (x:xs) i
+>   | i <= (rows-win) = diag' (x:xs) 0 ++ diag'' xs (i+1)
+>   | otherwise       = []
 >
 > findRow :: Board -> Int -> Row
 > findRow (x:xs) 0 = x
 > findRow (x:xs) i = findRow xs (i-1)
 
-Shrink array size to rows of 4 to test for win condition:
+Game is won if wins returns true for either player:
 
-i tracks subarray within row, j tracks number of rows
+> won :: Board -> Bool
+> won g = wins O g || wins X g
+
+Shrink array size to rows of 4 to test for win condition:
+(i tracks subarray within row, j tracks number of rows)
 
 > shrink :: Board -> Int -> Int -> Board
-> shrink (x:xs) i j = if i >= 0 && j > 1 then
->                                   [(take win (drop i x))] ++ (shrink (x:xs) (i-1) j)
->                     else if j == 1 then
->                                   [(take win (drop i x))] ++ (shrink'' x (cols-win-1) j)
->                     else if i < 0 then
->                                   shrink xs (cols-win) (j-1)
->                     else []
+> shrink (x:xs) i j
+>   | i >= 0 && j > 1 = [(take win (drop i x))] ++ (shrink (x:xs) (i-1) j)
+>   | j == 1          = [(take win (drop i x))] ++ (shrink'' x (cols-win-1) j)
+>   | i < 0           = shrink xs (cols-win) (j-1)
 >
 > shrink' :: Board -> Int -> Int -> Board
-> shrink' (x:xs) i j = if i >= 0 && j > 1 then
->                                   [(take win (drop i x))] ++ (shrink' (x:xs) (i-1) j)
->                     else if j == 1 then
->                                   [(take win (drop i x))] ++ (shrink'' x (rows-win-1) j)
->                     else if i < 0 then
->                                   shrink' xs (rows-win) (j-1)
->                     else []
+> shrink' (x:xs) i j
+>   | i >= 0 && j > 1 = [(take win (drop i x))] ++ (shrink' (x:xs) (i-1) j)
+>   | j == 1          = [(take win (drop i x))] ++ (shrink'' x (rows-win-1) j)
+>   | i < 0           = shrink' xs (rows-win) (j-1)
+>   | otherwise       = []
 >
 > shrink'' :: Row -> Int -> Int -> Board
-> shrink'' x i j = if i >= 0 then [take win (drop i x)] ++ (shrink'' x (i-1) j)
->                  else []
+> shrink'' x i j
+>   | i >= 0    = [take win (drop i x)] ++ (shrink'' x (i-1) j)
+>   | otherwise = []
 
 The user(s) or computer can only select a cell that is 'valid', i.e. has
 player value of B:
@@ -178,7 +177,7 @@ Get natural number from input and show prompt:
 > prompt :: Player -> String
 > prompt p = "Player " ++ show p ++ ", enter your move: "
 
-Run game:
+Run H vs H game:
 
 > connect4 :: IO ()
 > connect4 =  run empty O
@@ -210,7 +209,7 @@ Clear screen and move cursor position utilities:
 > goto :: Pos -> IO ()
 > goto (x,y) = putStr ("\ESC[" ++ show y ++ ";" ++ show x ++ "H")
 
-Type to represent the Game tree that shall be used:
+Type to represent the Game Tree that shall be used:
 
 > data Tree a = Node a [Tree a]
 >               deriving Show
@@ -236,9 +235,9 @@ The minimax algorithm:
 
 > minimax :: Tree Board -> Tree (Board,Player)
 > minimax (Node g [])
->    | wins O g = Node (g,O) []
->    | wins X g = Node (g,X) []
->    | otherwise = Node (g,B) []
+>    | wins O g    = Node (g,O) []
+>    | wins X g    = Node (g,X) []
+>    | otherwise   = Node (g,B) []
 > minimax (Node g ts)
 >    | turn g == O = Node (g, minimum ps) ts'
 >    | turn g == X = Node (g, maximum ps) ts'
@@ -275,10 +274,7 @@ Human vs Computer, main function to run H vs C version:
 >    | wins O g = putStrLn "Player O wins!\n"
 >    | wins X g = putStrLn "Player X wins!\n"
 >    | full g   = putStrLn "It's a draw!\n"
->    | p == O   = do i <- getNat (prompt p)
->                    case move g i p of 
->                       [] -> do putStrLn "ERROR: Invalid Move"
->                                play' g p
->                       [g'] -> play g' (next p)
+>    | p == O   = do putStr "Player O is thinking... "
+>                    (play $! (bestmove g p)) (next p)
 >    | p == X   = do putStr "Player X is thinking... "
 >                    (play $! (bestmove g p)) (next p)
