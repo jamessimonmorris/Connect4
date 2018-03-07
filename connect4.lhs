@@ -24,7 +24,7 @@ board, length of a winning sequence, and search depth for the game tree:
 > win = 4
 >
 > depth :: Int
-> depth = 7
+> depth = 8
 
 The board itself is represented as a list of rows, where each row is
 a list of player values, subject to the above row and column sizes:
@@ -62,7 +62,8 @@ Next player to move is simply given by swapping between O and X:
 > next B = B
 > next X = O
 
-Empty Board defined by replicating the Blank Player:
+Empty Board defined by replicating the Blank Player, and Test
+Board to test functions:
 
 > empty :: Board
 > empty = replicate rows (replicate cols B)
@@ -105,19 +106,19 @@ Concatenate all possible diagonals in order to determine win state:
 > diag :: Board -> Int -> Int -> Row
 > diag [] i j = []
 > diag g i j
->   | i < win && j <= (cols-win)  = take 1 (drop (i+j) (findRow g i)) ++ diag g (i+1) j
->   | i >= win && j <= (cols-win) = diag g 0 (j+1)
->   | otherwise                   = []
+>    | i < win && j <= (cols-win)  = take 1 (drop (i+j) (findRow g i)) ++ diag g (i+1) j
+>    | i >= win && j <= (cols-win) = diag g 0 (j+1)
+>    | otherwise                   = []
 >
 > diag' :: Board -> Int -> Board
 > diag' g i
->   | i <= (win*(rows-win+1)) = [take win (drop i (diag g 0 0))] ++ diag' g (i+win)
->   | otherwise               = []
+>    | i <= (win*(rows-win+1)) = [take win (drop i (diag g 0 0))] ++ diag' g (i+win)
+>    | otherwise               = []
 >
 > diag'' :: Board -> Int -> Board
 > diag'' (x:xs) i
->   | i <= (rows-win) = diag' (x:xs) 0 ++ diag'' xs (i+1)
->   | otherwise       = []
+>    | i <= (rows-win) = diag' (x:xs) 0 ++ diag'' xs (i+1)
+>    | otherwise       = []
 >
 > findRow :: Board -> Int -> Row
 > findRow (x:xs) 0 = x
@@ -133,21 +134,21 @@ Shrink array size to rows of 4 to test for win condition:
 
 > shrink :: Board -> Int -> Int -> Board
 > shrink (x:xs) i j
->   | i >= 0 && j > 1 = [(take win (drop i x))] ++ (shrink (x:xs) (i-1) j)
->   | j == 1          = [(take win (drop i x))] ++ (shrink'' x (cols-win-1) j)
->   | i < 0           = shrink xs (cols-win) (j-1)
+>    | i >= 0 && j > 1 = [(take win (drop i x))] ++ (shrink (x:xs) (i-1) j)
+>    | j == 1          = [(take win (drop i x))] ++ (shrink'' x (cols-win-1) j)
+>    | i < 0           = shrink xs (cols-win) (j-1)
 >
 > shrink' :: Board -> Int -> Int -> Board
 > shrink' (x:xs) i j
->   | i >= 0 && j > 1 = [(take win (drop i x))] ++ (shrink' (x:xs) (i-1) j)
->   | j == 1          = [(take win (drop i x))] ++ (shrink'' x (rows-win-1) j)
->   | i < 0           = shrink' xs (rows-win) (j-1)
->   | otherwise       = []
+>    | i >= 0 && j > 1 = [(take win (drop i x))] ++ (shrink' (x:xs) (i-1) j)
+>    | j == 1          = [(take win (drop i x))] ++ (shrink'' x (rows-win-1) j)
+>    | i < 0           = shrink' xs (rows-win) (j-1)
+>    | otherwise       = []
 >
 > shrink'' :: Row -> Int -> Int -> Board
 > shrink'' x i j
->   | i >= 0    = [take win (drop i x)] ++ (shrink'' x (i-1) j)
->   | otherwise = []
+>    | i >= 0    = [take win (drop i x)] ++ (shrink'' x (i-1) j)
+>    | otherwise = []
 
 The user(s) or computer can only select a cell that is 'valid', i.e. has
 player value of B:
