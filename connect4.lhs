@@ -68,7 +68,12 @@ Empty Board defined by replicating the Blank Player:
 > empty = replicate rows (replicate cols B)
 >
 > test :: Board
-> test = [[B,X,X,O,X,B,B],[B,O,O,X,X,B,B],[B,O,X,O,O,B,X],[X,O,O,X,X,X,O],[B,B,B,B,B,B,B],[X,O,O,X,B,B,O]]
+> test = [[B,X,X,O,X,B,B],
+>         [B,O,O,X,X,B,B],
+>         [B,O,X,O,O,B,X],
+>         [X,O,O,X,X,X,O],
+>         [B,B,B,B,B,B,B],
+>         [X,O,O,X,B,B,O]]
 
 End of game can be determined if the Board is full/filled with all
 non-blank players:
@@ -259,7 +264,7 @@ A function that returns the best next move for the computer:
 
 Human vs Computer, main function to run H vs C version:
 
-> main :: IO ()
+> main :: IO()
 > main =  do hSetBuffering stdout NoBuffering
 >            play empty O
 >
@@ -274,7 +279,10 @@ Human vs Computer, main function to run H vs C version:
 >    | wins O g = putStrLn "Player O wins!\n"
 >    | wins X g = putStrLn "Player X wins!\n"
 >    | full g   = putStrLn "It's a draw!\n"
->    | p == O   = do putStr "Player O is thinking... "
->                    (play $! (bestmove g p)) (next p)
+>    | p == O   = do i <- getNat( prompt p)
+>                    case move g i p of
+>                       [] -> do putStrLn "ERROR: Invalid Move"
+>                                play' g p
+>                       [g'] -> play g' ( next p )
 >    | p == X   = do putStr "Player X is thinking... "
 >                    (play $! (bestmove g p)) (next p)
